@@ -5,10 +5,8 @@ import { JwtService } from '@nestjs/jwt';
 import { Model } from 'mongoose';
 import * as bcryptjs from "bcryptjs";
 
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { CreateUserDto, UpdateAuthDto, RegisterUserDto, LoginDto } from "./dto/index";
 import { User } from './entities/user.entity';
-import { LoginDto } from './dto/login.dto';
 import { JwtPayload } from './interfaces/jwt-payload';
 import { LoginResponse } from './interfaces/login-response';
 
@@ -30,7 +28,7 @@ export class AuthService {
       await newUser.save();
       const {password: _, ...user} = newUser.toJSON();
       return user;
-    } catch (error) {
+    } catch (error) {    
       if (error.code === 11000) {
         throw new BadRequestException(`${createUserDto.email} already exists!`)
       }
@@ -38,8 +36,12 @@ export class AuthService {
     }
   }
 
-  async register(): Promise<LoginResponse> {
-    
+  async register(registerUserDto: RegisterUserDto): Promise<LoginResponse> {
+    const user = await this.create(registerUserDto)
+    return {
+      user: user,
+      token: this.getJwt({id: user._id})
+    };
   }
 
   async login(loginDto: LoginDto) {
@@ -57,12 +59,12 @@ export class AuthService {
 
     return {
       user: rest,
-      token: this.getJwt({id: user.id})
+      token: this.getJwt({id: user._id})
     }
   }
 
-  findAll() {
-    return `This action returns all auth`;
+  findAll(): Promise<User[]> {
+    return this.userModel.find();
   }
 
   findOne(id: number) {
